@@ -1,5 +1,5 @@
 // ================= CONFIG =================
-const BASE_URL = "https://womens-safety-backend-oz26.onrender.com"; // Restored Render URL
+const BASE_URL = "https://womens-safety-backend-syp4.onrender.com";
 
 // ================= APP STATE =================
 let isSirenPlaying = false;
@@ -421,30 +421,6 @@ let userMarker = null;
 let watchId = null;
 let lastSyncTime = 0;
 
-function showSection(sectionId) {
-    // Hide all sections
-    const sections = document.querySelectorAll("section");
-    sections.forEach(s => s.classList.remove("active"));
-    
-    // Show target section
-    const target = document.getElementById(sectionId);
-    if (target) {
-        target.classList.add("active");
-    }
-
-    // SPECIAL: Load history if history tab clicked
-    if (sectionId === 'history') {
-        loadActivityHistory();
-    }
-    if (sectionId === 'contacts') {
-        fetchContacts();
-    }
-    if (sectionId === 'location') {
-        initMap();
-    }
-
-    // Update nav links
-}
 
 // ================= LIVE MAP LOGIC =================
 function initMap() {
@@ -650,131 +626,4 @@ function updateTimerDisplay(elementId, totalSeconds) {
     const s = totalSeconds % 60;
     document.getElementById(elementId).innerText = 
         `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function switchHistoryTab(tab) {
-    const sosTab = document.getElementById("tabSos");
-    const journeyTab = document.getElementById("tabJourney");
-    const sosList = document.getElementById("sosHistory");
-    const journeyList = document.getElementById("journeyHistory");
-
-    if (tab === 'sos') {
-        sosTab.classList.add("active");
-        journeyTab.classList.remove("active");
-        sosList.style.display = "block";
-        journeyList.style.display = "none";
-    } else {
-        sosTab.classList.remove("active");
-        journeyTab.classList.add("active");
-        sosList.style.display = "none";
-        journeyList.style.display = "block";
-    }
-}
-
-// ================= LIVE MAP LOGIC =================
-let map = null;
-let userMarker = null;
-let watchId = null;
-let lastSyncTime = 0;
-
-function initMap() {
-    if (map) return; // Already initialized
-
-    // Default to a central location if GPS fails initially
-    map = L.map('map').setView([20.5937, 78.9629], 5); 
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Initial attempt to find user
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-            const { latitude, longitude } = pos.coords;
-            map.setView([latitude, longitude], 15);
-            updateMapMarker(latitude, longitude);
-        });
-    }
-}
-
-function startLiveTracking() {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
-
-    document.getElementById("startTrackingBtn").style.display = "none";
-    document.getElementById("stopTrackingBtn").style.display = "inline-block";
-    document.getElementById("location").classList.add("tracking-active");
-    document.getElementById("trackingStatus").innerHTML = `<span class="status-dot"></span> Live Tracking Active`;
-
-    watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const { latitude, longitude } = pos.coords;
-            
-            // Update UI
-            document.getElementById("lat").innerText = latitude.toFixed(6);
-            document.getElementById("lng").innerText = longitude.toFixed(6);
-
-            // Update Map
-            updateMapMarker(latitude, longitude);
-            map.panTo([latitude, longitude]);
-
-            // Sync to Backend (Throttle: every 10 seconds)
-            const now = Date.now();
-            if (now - lastSyncTime > 10000) {
-                syncLocationToBackend(latitude, longitude);
-                lastSyncTime = now;
-            }
-        },
-        (err) => {
-            console.error("Tracking Error:", err);
-            stopLiveTracking();
-            alert("Location access denied or lost.");
-        },
-        { enableHighAccuracy: true }
-    );
-}
-
-function stopLiveTracking() {
-    if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-    }
-
-    document.getElementById("startTrackingBtn").style.display = "inline-block";
-    document.getElementById("stopTrackingBtn").style.display = "none";
-    document.getElementById("location").classList.remove("tracking-active");
-    document.getElementById("trackingStatus").innerHTML = `<span class="status-dot"></span> Tracking Inactive`;
-}
-
-function updateMapMarker(lat, lng) {
-    if (!userMarker) {
-        // Create a custom safety icon
-        const safetyIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div style="background-color: var(--primary); width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px var(--primary-glow);"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-        });
-        userMarker = L.marker([lat, lng], { icon: safetyIcon }).addTo(map);
-        userMarker.bindPopup("<b>You are here</b><br>Safety tracking active.").openPopup();
-    } else {
-        userMarker.setLatLng([lat, lng]);
-    }
-}
-
-async function syncLocationToBackend(latitude, longitude) {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-        await fetch(`${BASE_URL}/api/location`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({ latitude, longitude })
-        });
-    } catch (err) {
-        console.error("Backend sync failed", err);
-    }
 }

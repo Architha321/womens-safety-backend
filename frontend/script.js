@@ -1,5 +1,5 @@
 // ================= CONFIG =================
-const BASE_URL = "https://womens-safety-backend-oz26.onrender.com"; // Production URL
+const BASE_URL = "https://womens-safety-backend-syp4.onrender.com";
 
 // ================= APP STATE =================
 let isSirenPlaying = false;
