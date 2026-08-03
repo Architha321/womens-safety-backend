@@ -186,6 +186,44 @@
 
                 </div>
             </nav>
+            <!-- ================= PROFILE ================= -->
+<section id="profile">
+
+    <div class="section-header">
+        <h2>👤 My Profile</h2>
+    </div>
+
+    <div class="profile-card">
+
+        <div class="profile-item">
+            <label>Name</label>
+            <input type="text" id="profileName" readonly>
+        </div>
+
+        <div class="profile-item">
+            <label>Email</label>
+            <input type="email" id="profileEmail" readonly>
+        </div>
+
+        <div class="profile-buttons">
+
+            <button class="btn-primary" onclick="editProfile()">
+                ✏ Edit Profile
+            </button>
+
+            <button class="btn-secondary" onclick="changePassword()">
+                🔒 Change Password
+            </button>
+
+            <button class="btn-danger" onclick="handleLogout()">
+                🚪 Logout
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
 
             <div class="container">
                 <!-- Home / Dashboard Section -->

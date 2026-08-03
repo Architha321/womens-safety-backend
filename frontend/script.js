@@ -218,8 +218,16 @@ function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
     dropdown.classList.toggle("active");
 }
-function showProfile() {
-    alert("Profile page coming soon!");
+function showProfile(){
+
+    document.getElementById("profileName").value =
+        localStorage.getItem("userName") || "";
+
+    document.getElementById("profileEmail").value =
+        localStorage.getItem("userEmail") || "";
+
+    showSection("profile");
+
 }
 function toggleMobileMenu() {
     const navLinks = document.getElementById("navLinks");
@@ -286,12 +294,17 @@ async function handleLogin() {
         alert("Please enter email & password");
         return;
     }
-    if (!navigator.onLine) return alert("No internet connection! ❌");
+
+    if (!navigator.onLine) {
+        return alert("No internet connection! ❌");
+    }
 
     try {
         const res = await fetch(`${BASE_URL}/api/auth/login`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({ email, password }),
         });
 
@@ -303,18 +316,29 @@ async function handleLogin() {
             return;
         }
 
+        // Save login information
         localStorage.setItem("token", data.token);
-        if (data.user?.name) localStorage.setItem("userName", data.user.name);
 
-        document.getElementById("userName").innerText = data.user?.name || "Profile";
+        if (data.name) {
+            localStorage.setItem("userName", data.name);
+        }
 
+        if (data.email) {
+            localStorage.setItem("userEmail", data.email);
+        }
+
+        // Display username in navbar
+        document.getElementById("userName").innerText =
+            data.name || "Profile";
+
+        // Open the app
         showApp();
+
     } catch (err) {
         console.error("DEBUG INFO (Login):", err);
         alert("Server error: Check console (F12) for details ❌");
     }
 }
-
 function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("userName");
@@ -732,3 +756,34 @@ window.alert = function(message) {
         showToast(message, 'success');
     }
 };
+function editProfile(){
+
+    const input=document.getElementById("profileName");
+
+    if(input.readOnly){
+
+        input.readOnly=false;
+
+        input.focus();
+
+        alert("Edit your name and click OK.");
+
+    }else{
+
+        input.readOnly=true;
+
+        localStorage.setItem("userName",input.value);
+
+        document.getElementById("userName").innerText=input.value;
+
+        alert("Profile Updated Successfully.");
+
+    }
+
+}
+
+function changePassword(){
+
+    alert("Change Password feature will be connected to the backend in the next step.");
+
+}
