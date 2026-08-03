@@ -218,7 +218,9 @@ function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
     dropdown.classList.toggle("active");
 }
-
+function showProfile() {
+    alert("Profile page coming soon!");
+}
 function toggleMobileMenu() {
     const navLinks = document.getElementById("navLinks");
     navLinks.classList.toggle("active");
