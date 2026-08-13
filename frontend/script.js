@@ -317,6 +317,7 @@ async function handleLogin() {
         });
 
         const data = await res.json();
+        console.log("Login Response:", data);
 
         if (!res.ok) {
             errorDiv.innerText = data.message || data.error || "Login failed ❌";
