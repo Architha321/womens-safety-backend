@@ -71,7 +71,14 @@ function showApp() {
     document.getElementById("welcomeSection").style.display = "none";
     document.getElementById("authSection").style.display = "none";
     document.getElementById("appContent").style.display = "block";
+
+    // Show username in navbar
+    document.getElementById("userName").textContent =
+        localStorage.getItem("userName") || "Profile";
+
     showSection('home');
+
+    lucide.createIcons();
 }
 
 function showSection(sectionId) {
@@ -219,7 +226,6 @@ function toggleProfileMenu() {
     dropdown.classList.toggle("active");
 }
 function showProfile() {
-
     document.getElementById("profileName").value =
         localStorage.getItem("userName") || "";
 
@@ -229,7 +235,6 @@ function showProfile() {
     document.getElementById("profileDropdown").classList.remove("active");
 
     showSection("profile");
-
 }
 function toggleMobileMenu() {
     const navLinks = document.getElementById("navLinks");
@@ -298,7 +303,8 @@ async function handleLogin() {
     }
 
     if (!navigator.onLine) {
-        return alert("No internet connection! ❌");
+        alert("No internet connection! ❌");
+        return;
     }
 
     try {
@@ -318,22 +324,24 @@ async function handleLogin() {
             return;
         }
 
-        // Save login information
+        // Save token
         localStorage.setItem("token", data.token);
 
-        if (data.name) {
-            localStorage.setItem("userName", data.name);
-        }
+        // Get user details from response
+        const userName = data.user?.name || data.name || "Profile";
+        const userEmail = data.user?.email || data.email || "";
 
-        if (data.email) {
-            localStorage.setItem("userEmail", data.email);
-        }
+        // Save in localStorage
+        localStorage.setItem("userName", userName);
+        localStorage.setItem("userEmail", userEmail);
 
-        // Display username in navbar
-        document.getElementById("userName").innerText =
-            data.name || "Profile";
+        // Update navbar immediately
+        document.getElementById("userName").textContent = userName;
 
-        // Open the app
+        // Hide any previous error
+        errorDiv.style.display = "none";
+
+        // Open app
         showApp();
 
     } catch (err) {
