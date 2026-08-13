@@ -180,8 +180,8 @@
                     </div>
 
                     <div class="profile-dropdown" id="profileDropdown">
-                        <a href="#" onclick="showProfile()">My Profile</a>
-                        <a href="#" onclick="handleLogout()">Logout</a>
+                        <a href="javascript:void(0)" onclick="showProfile()">My Profile</a>
+                        <a href="javascript:void(0)" onclick="handleLogout()">Logout</a>
                     </div>
 
                 </div>
@@ -196,7 +196,7 @@
     <div class="profile-card">
 
         <div class="profile-item">
-            <label>Name</label>
+            <label>Username</label>
             <input type="text" id="profileName" readonly>
         </div>
 
@@ -206,19 +206,9 @@
         </div>
 
         <div class="profile-buttons">
-
-            <button class="btn-primary" onclick="editProfile()">
-                ✏ Edit Profile
-            </button>
-
-            <button class="btn-secondary" onclick="changePassword()">
-                🔒 Change Password
-            </button>
-
             <button class="btn-danger" onclick="handleLogout()">
                 🚪 Logout
             </button>
-
         </div>
 
     </div>

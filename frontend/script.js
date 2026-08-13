@@ -218,13 +218,15 @@ function toggleProfileMenu() {
     const dropdown = document.getElementById("profileDropdown");
     dropdown.classList.toggle("active");
 }
-function showProfile(){
+function showProfile() {
 
     document.getElementById("profileName").value =
         localStorage.getItem("userName") || "";
 
     document.getElementById("profileEmail").value =
         localStorage.getItem("userEmail") || "";
+
+    document.getElementById("profileDropdown").classList.remove("active");
 
     showSection("profile");
 
@@ -342,6 +344,8 @@ async function handleLogin() {
 function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+
     window.location.reload();
 }
 
@@ -787,3 +791,10 @@ function changePassword(){
     alert("Change Password feature will be connected to the backend in the next step.");
 
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const navUser = document.getElementById("userName");
+    if (navUser) {
+        navUser.textContent = localStorage.getItem("userName") || "Profile";
+    }
+});
