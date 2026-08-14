@@ -364,8 +364,8 @@ function handleGoogleAuth() {
 
 // ================= CONTACTS =================
 async function addContact() {
-    const name = document.getElementById("contactName")?.value;
-    const phone = document.getElementById("contactPhone")?.value;
+    const name = document.getElementById("contactName")?.value.trim();
+    const phone = document.getElementById("contactPhone")?.value.trim();
     const token = localStorage.getItem("token");
 
     if (!token) return alert("Please login first");
@@ -381,19 +381,23 @@ async function addContact() {
             body: JSON.stringify({ name, phone }),
         });
 
-        if (res.ok) {
-            alert("Contact added ✅");
-            document.getElementById("contactName").value = "";
-            document.getElementById("contactPhone").value = "";
-            fetchContacts();
-        } else {
-            alert("Failed to add contact");
+        const data = await res.json();
+
+        if (!res.ok) {
+            return alert(data.message || "Failed to add contact ❌");
         }
+
+        alert("Contact added successfully ✅");
+
+        document.getElementById("contactName").value = "";
+        document.getElementById("contactPhone").value = "";
+
+        fetchContacts();
     } catch (err) {
-        console.error(err);
+        console.error("Add Contact Error:", err);
+        alert("Server error while adding contact ❌");
     }
 }
-
 async function fetchContacts() {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -455,23 +459,34 @@ async function deleteContact(id) {
 // ================= SOS & LOCATION =================
 async function triggerSOS() {
     if (!navigator.onLine) return alert("No internet connection! ❌");
+
     const token = localStorage.getItem("token");
     if (!token) return alert("Please login first");
 
-    if (!navigator.geolocation) return alert("Geolocation not supported");
+    if (!navigator.geolocation) {
+        return alert("Geolocation is not supported.");
+    }
 
-    const sosBtn = document.getElementById("sosTrigger");
+    // Works for both desktop and mobile SOS buttons
+    const sosBtn =
+        document.getElementById("sosTriggerDesktop") ||
+        document.getElementById("sosTriggerFab");
+
     if (sosBtn) {
         sosBtn.innerText = "Sending...";
         sosBtn.style.opacity = "0.7";
-        sosBtn.style.pointerEvents = "none";
+        sosBtn.disabled = true;
     }
 
     navigator.geolocation.getCurrentPosition(async (pos) => {
+
         const { latitude, longitude } = pos.coords;
-        showModal('sosModal');
+
+        showModal("sosModal");
         playSiren();
-        document.getElementById("alertLocation").innerText = `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+        document.getElementById("alertLocation").innerText =
+            `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
         try {
             const res = await fetch(`${BASE_URL}/api/sos/trigger`, {
@@ -482,38 +497,57 @@ async function triggerSOS() {
                 },
                 body: JSON.stringify({ latitude, longitude }),
             });
+
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to trigger SOS");
-            console.log("SOS Triggered Successfully:", data);
-            
-            // Show detailed Twilio error if the dispatch failed
-            if (data.alertsDispatch) {
-                const failedAlerts = data.alertsDispatch.filter(a => a.status.startsWith("FAILED"));
-                if (failedAlerts.length > 0) {
-                    alert(`SOS Triggered, but SMS failed: ${failedAlerts[0].status} ❌`);
-                }
+
+            if (!res.ok) {
+                throw new Error(data.message || "SOS failed");
+            }
+
+            console.log("SOS Success:", data);
+
+            if (data.alertsDispatch && data.alertsDispatch.length > 0) {
+
+                const successful = data.alertsDispatch.filter(
+                    c => c.status === "Ready to Notify"
+                ).length;
+
+                alert(
+                    `SOS Sent Successfully!\n\n` +
+                    `Location shared.\n` +
+                    `${successful} emergency contact(s) are ready to be notified.`
+                );
+
+            } else {
+                alert(
+                    "SOS recorded successfully, but no emergency contacts were found."
+                );
             }
 
         } catch (err) {
-            console.error("SOS Alert failed to send to server", err);
-            alert("Failed to reach server. Call emergency numbers manually! ❌");
+            console.error("SOS Error:", err);
+            alert("Failed to send SOS ❌");
         } finally {
+
             if (sosBtn) {
                 sosBtn.innerText = "SOS";
                 sosBtn.style.opacity = "1";
-                sosBtn.style.pointerEvents = "auto";
+                sosBtn.disabled = false;
             }
+
         }
+
     }, (err) => {
-        console.error("GPS Error:", err);
-        alert("Location access denied! SOS triggered without GPS. ❌");
+
+        console.error("Location Error:", err);
+
         if (sosBtn) {
             sosBtn.innerText = "SOS";
             sosBtn.style.opacity = "1";
-            sosBtn.style.pointerEvents = "auto";
+            sosBtn.disabled = false;
         }
-        showModal('sosModal');
-        playSiren();
+
+        alert("Location permission denied.");
     });
 }
 
