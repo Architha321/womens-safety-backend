@@ -1,6 +1,12 @@
 // ================= CONFIG =================
 const BASE_URL = "https://womens-safety-backend-syp4.onrender.com";
 
+let SmsPlugin = null;
+
+if (window.Capacitor && typeof window.Capacitor.registerPlugin === "function") {
+    SmsPlugin = window.Capacitor.registerPlugin("SmsPlugin");
+}
+
 // ================= APP STATE =================
 let isSirenPlaying = false;
 let journeyTimerInterval = null;
@@ -458,16 +464,19 @@ async function deleteContact(id) {
 
 // ================= SOS & LOCATION =================
 async function triggerSOS() {
-    if (!navigator.onLine) return alert("No internet connection! ❌");
+    if (!navigator.onLine) {
+        return alert("No internet connection! ❌");
+    }
 
     const token = localStorage.getItem("token");
-    if (!token) return alert("Please login first");
+    if (!token) {
+        return alert("Please login first");
+    }
 
     if (!navigator.geolocation) {
         return alert("Geolocation is not supported.");
     }
 
-    // Works for both desktop and mobile SOS buttons
     const sosBtn =
         document.getElementById("sosTriggerDesktop") ||
         document.getElementById("sosTriggerFab");
@@ -489,13 +498,17 @@ async function triggerSOS() {
             `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
         try {
+            // First tell the backend about the SOS
             const res = await fetch(`${BASE_URL}/api/sos/trigger`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ latitude, longitude }),
+                body: JSON.stringify({
+                    latitude,
+                    longitude
+                }),
             });
 
             const data = await res.json();
@@ -504,29 +517,65 @@ async function triggerSOS() {
                 throw new Error(data.message || "SOS failed");
             }
 
-            console.log("SOS Success:", data);
+            console.log("SOS recorded:", JSON.stringify(data));
 
-            if (data.alertsDispatch && data.alertsDispatch.length > 0) {
+            const contacts = data.alertsDispatch || [];
 
-                const successful = data.alertsDispatch.filter(
-                    c => c.status === "Ready to Notify"
-                ).length;
-
-                alert(
-                    `SOS Sent Successfully!\n\n` +
-                    `Location shared.\n` +
-                    `${successful} emergency contact(s) are ready to be notified.`
-                );
-
-            } else {
+            if (contacts.length === 0) {
                 alert(
                     "SOS recorded successfully, but no emergency contacts were found."
                 );
+                return;
             }
 
+            // SMS message
+            const message =
+                `🚨 EMERGENCY (ShieldSafe): User needs immediate help.\n` +
+                `Location: https://maps.google.com/?q=${latitude},${longitude}`;
+
+            let successful = 0;
+
+            // Send SMS through the Android phone/SIM
+            for (const contact of contacts) {
+
+                try {
+                    console.log(
+                        `Sending SMS to ${contact.name} (${contact.phone})`
+                    );
+
+                    const result = await SmsPlugin.sendSMS({
+                        phoneNumber: contact.phone,
+                        message: message
+                    });
+
+                    console.log(
+                        `SMS request successful for ${contact.name}:`,
+                        result
+                    );
+
+                    successful++;
+
+                } catch (smsError) {
+
+                    console.error(
+                        `SMS failed for ${contact.name}:`,
+                        smsError
+                    );
+                }
+            }
+
+            alert(
+                `SOS processed successfully! 🚨\n\n` +
+                `Location shared.\n` +
+                `${successful} emergency contact(s) received the SMS request.`
+            );
+
         } catch (err) {
+
             console.error("SOS Error:", err);
-            alert("Failed to send SOS ❌");
+
+            alert("Failed to process SOS ❌");
+
         } finally {
 
             if (sosBtn) {
@@ -534,7 +583,6 @@ async function triggerSOS() {
                 sosBtn.style.opacity = "1";
                 sosBtn.disabled = false;
             }
-
         }
 
     }, (err) => {
@@ -550,7 +598,6 @@ async function triggerSOS() {
         alert("Location permission denied.");
     });
 }
-
 // ================= LIVE MAP LOGIC =================
 function initMap() {
     if (map) return; // Already initialized
