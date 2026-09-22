@@ -1,28 +1,21 @@
 const prisma = require("../prisma");
 const { validationResult } = require("express-validator");
-const twilio = require("twilio");
-
-// Initialize Twilio Client
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-
-let twilioClient = null;
-if (accountSid && authToken && twilioPhone && accountSid !== "your_account_sid_here") {
-  twilioClient = twilio(accountSid, authToken);
-}
 
 exports.triggerSOS = async (req, res) => {
   // Check validation errors
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({
+      errors: errors.array(),
+    });
   }
 
   try {
     const { latitude, longitude } = req.body;
-    const userId = req.userId; // Taken from token by middleware
+    const userId = req.userId;
 
+    // Save SOS alert in database
     const sos = await prisma.sOSAlert.create({
       data: {
         userId,
@@ -32,68 +25,55 @@ exports.triggerSOS = async (req, res) => {
       },
     });
 
+    // Get emergency contacts for this user
     const contacts = await prisma.emergencyContact.findMany({
       where: { userId },
     });
 
-    console.log("=== INITIATING SMS ALERT DISPATCH ===");
-    const alertsSent = [];
+    // Return contacts to the Android app.
+    // The Android app will send the actual SMS using the phone SIM.
+    const alertsDispatch = contacts.map((contact) => ({
+      name: contact.contactName,
+      phone: contact.contactPhone,
+      status: "Ready to Notify",
+    }));
 
-    // Map through contacts and send real SMS if Twilio is configured
-    for (const c of contacts) {
-      const messageBody = `🚨 EMERGENCY (ShieldSafe): User needs immediate help. Location: https://maps.google.com/?q=${latitude},${longitude}`;
-      
-      let dispatchStatus = "FAILED";
-      
-      if (twilioClient) {
-        try {
-          const message = await twilioClient.messages.create({
-            body: messageBody,
-            from: twilioPhone,
-            to: c.contactPhone
-          });
-          console.log(`[TWILIO] Sent to ${c.contactName} (${c.contactPhone}) - SID: ${message.sid}`);
-          dispatchStatus = "DELIVERED";
-        } catch (smsError) {
-          console.error(`[TWILIO ERROR] Failed to send to ${c.contactName}:`, smsError.message);
-          dispatchStatus = `FAILED: ${smsError.message}`;
-        }
-      } else {
-        // Fallback to simulation if keys are missing
-        console.log(`[SMS API MOCK] Sending to ${c.contactName} (${c.contactPhone}): ${messageBody}`);
-        dispatchStatus = "MOCKED (Keys Missing)";
-      }
-      
-      alertsSent.push({
-        name: c.contactName,
-        phone: c.contactPhone,
-        status: dispatchStatus,
-        timestamp: new Date().toISOString()
-      });
-    }
-    console.log("=== SMS DISPATCH COMPLETE ===");
+    console.log("=== SOS ALERT ===");
+    console.log(`Location: ${latitude}, ${longitude}`);
+    console.log("Emergency Contacts:", alertsDispatch);
+    console.log("SMS will be sent by the Android phone/SIM.");
 
     res.json({
-      message: "SOS Triggered ✅ Emergency contacts notified.",
+      message: "SOS recorded. Emergency contacts ready for SMS.",
       sos,
-      alertsDispatch: alertsSent,
+      alertsDispatch,
     });
+
   } catch (error) {
-    console.error("SOS Dispatch Error:", error);
-    res.status(500).json({ error: "Failed to dispatch SOS alerts." });
+    console.error("SOS Error:", error);
+
+    res.status(500).json({
+      error: "Failed to process SOS alert.",
+    });
   }
 };
 
 exports.getSOSAlerts = async (req, res) => {
   try {
-    const userId = req.userId; // Filter by current user
+    const userId = req.userId;
+
     const data = await prisma.sOSAlert.findMany({
       where: { userId },
       orderBy: { alertTime: "desc" },
     });
 
     res.json(data);
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Get SOS Alerts Error:", error);
+
+    res.status(500).json({
+      error: error.message,
+    });
   }
 };
