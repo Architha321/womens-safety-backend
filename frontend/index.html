@@ -314,6 +314,8 @@
                             </div>
                         </div>
                     </div>
+                    <div style="text-align:center; margin:30px 0;">
+</div>
                 </section>
 
                 <!-- Location Section -->
@@ -697,28 +699,37 @@
                     <button class="sos-btn-fab" id="sosTriggerFab"
                         onclick="triggerSOS()">SOS</button>
                 </div>
-                <div class="bottom-nav">
-                    <a href="#home" class="bottom-nav-item active"
-                        onclick="showSection('home')">
-                        <i data-lucide="home"></i>
-                        <span>Home</span>
-                    </a>
-                    <a href="#journey" class="bottom-nav-item"
-                        onclick="showSection('journey')">
-                        <i data-lucide="route"></i>
-                        <span>SafeTrip</span>
-                    </a>
-                    <a href="#contacts" class="bottom-nav-item"
-                        onclick="showSection('contacts')">
-                        <i data-lucide="users"></i>
-                        <span>Contacts</span>
-                    </a>
-                    <a href="#safetytips" class="bottom-nav-item"
-                        onclick="showSection('safetytips')">
-                        <i data-lucide="book-open"></i>
-                        <span>Tips</span>
-                    </a>
-                </div>
+               <div class="bottom-nav">
+    <a href="#home" class="bottom-nav-item active"
+        onclick="showSection('home')">
+        <i data-lucide="home"></i>
+        <span>Home</span>
+    </a>
+<a href="#history" class="bottom-nav-item"
+    onclick="showSection('history')">
+    <i data-lucide="activity"></i>
+    <span>Activity</span>
+</a>
+
+<a href="#journey" class="bottom-nav-item"
+    onclick="showSection('journey')">
+    <i data-lucide="route"></i>
+    <span>SafeTrip</span>
+</a>
+
+<a href="#contacts" class="bottom-nav-item"
+    onclick="showSection('contacts')">
+    <i data-lucide="users"></i>
+    <span>Contacts</span>
+</a>
+
+<a href="#profile" class="bottom-nav-item"
+    onclick="showProfile()">
+    <i data-lucide="user"></i>
+    <span>Profile</span>
+</a>
+</div>
+
             </div>
         </div>
 
@@ -786,7 +797,16 @@
         // Initialize Lucide icons
         lucide.createIcons();
     </script>
-        <script src="script.js"></script>
+    <script src="capacitor.js"></script>
+
+<script>
+    window.Capacitor = capacitorExports.Capacitor;
+
+    console.log("CAPACITOR CHECK:", window.Capacitor);
+    console.log("REGISTER PLUGIN:", window.Capacitor?.registerPlugin);
+</script>
+
+<script src="script.js"></script>
         <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

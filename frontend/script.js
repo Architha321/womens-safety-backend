@@ -3,10 +3,20 @@ const BASE_URL = "https://womens-safety-backend-syp4.onrender.com";
 
 let SmsPlugin = null;
 
-if (window.Capacitor && typeof window.Capacitor.registerPlugin === "function") {
-    SmsPlugin = window.Capacitor.registerPlugin("SmsPlugin");
-}
+function getSmsPlugin() {
+    if (
+        window.Capacitor &&
+        typeof window.Capacitor.registerPlugin === "function"
+    ) {
+        if (!SmsPlugin) {
+            SmsPlugin = window.Capacitor.registerPlugin("SmsPlugin");
+        }
 
+        return SmsPlugin;
+    }
+
+    return null;
+}
 // ================= APP STATE =================
 let isSirenPlaying = false;
 let journeyTimerInterval = null;
@@ -529,11 +539,10 @@ async function triggerSOS() {
             }
 
             // SMS message
-            const message =
-                `🚨 EMERGENCY (ShieldSafe): User needs immediate help.\n` +
-                `Location: https://maps.google.com/?q=${latitude},${longitude}`;
-
-            let successful = 0;
+         const message =
+    `SHIELDSAFE EMERGENCY: User needs immediate help. ` +
+    `Location: https://maps.google.com/?q=${latitude},${longitude}`;
+     let successful = 0;
 
             // Send SMS through the Android phone/SIM
             for (const contact of contacts) {
@@ -543,10 +552,16 @@ async function triggerSOS() {
                         `Sending SMS to ${contact.name} (${contact.phone})`
                     );
 
-                    const result = await SmsPlugin.sendSMS({
-                        phoneNumber: contact.phone,
-                        message: message
-                    });
+                    const smsPlugin = getSmsPlugin();
+
+if (!smsPlugin) {
+    throw new Error("Native SMS plugin is not available");
+}
+
+const result = await smsPlugin.sendSMS({
+    phoneNumber: contact.phone,
+    message: message
+});
 
                     console.log(
                         `SMS request successful for ${contact.name}:`,
@@ -729,37 +744,107 @@ function triggerFakeCall() {
 }
 
 // ================= SAFETRIP TRACKER =================
-function startJourney() {
+// ================= SAFETRIP TRACKER =================
+let currentJourneyId = null;
+
+async function startJourney() {
     const dest = document.getElementById("destination").value;
-    const mins = document.getElementById("eta").value;
+    const mins = Number(document.getElementById("eta").value);
 
     if (!dest) return alert("Please enter destination");
+    if (!mins || mins <= 0) return alert("Please enter a valid ETA");
 
-    document.getElementById("journeySetup").style.display = "none";
-    document.getElementById("journeyActive").style.display = "block";
-    document.getElementById("displayDest").innerText = dest;
+    const token = localStorage.getItem("token");
+    if (!token) return alert("Please login first");
 
-    let seconds = mins * 60;
-    updateTimerDisplay('journeyTimerDisplay', seconds);
+    try {
+        const eta = new Date(Date.now() + mins * 60 * 1000);
 
-    journeyTimerInterval = setInterval(() => {
-        seconds--;
-        updateTimerDisplay('journeyTimerDisplay', seconds);
+        const response = await fetch(`${BASE_URL}/api/journey/start`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                destination: dest,
+                eta: eta.toISOString()
+            })
+        });
 
-        if (seconds <= 0) {
-            clearInterval(journeyTimerInterval);
-            triggerSOS();
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to start SafeTrip");
         }
-    }, 1000);
+
+        currentJourneyId = data.journey.id;
+
+        document.getElementById("journeySetup").style.display = "none";
+        document.getElementById("journeyActive").style.display = "block";
+        document.getElementById("displayDest").innerText = dest;
+
+        let seconds = mins * 60;
+        updateTimerDisplay("journeyTimerDisplay", seconds);
+
+        journeyTimerInterval = setInterval(() => {
+            seconds--;
+            updateTimerDisplay("journeyTimerDisplay", seconds);
+
+            if (seconds <= 0) {
+                clearInterval(journeyTimerInterval);
+                triggerSOS();
+            }
+        }, 1000);
+
+        alert("SafeTrip started successfully!");
+
+    } catch (error) {
+        console.error("Start SafeTrip error:", error);
+        alert("Failed to start SafeTrip ❌");
+    }
 }
 
-function completeJourney() {
+async function completeJourney() {
     clearInterval(journeyTimerInterval);
+
+    const token = localStorage.getItem("token");
+
+    if (currentJourneyId && token) {
+        try {
+            const response = await fetch(`${BASE_URL}/api/journey/complete`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    journeyId: currentJourneyId
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to complete SafeTrip");
+            }
+
+            console.log("SafeTrip completed:", data);
+
+        } catch (error) {
+            console.error("Complete SafeTrip error:", error);
+            alert("SafeTrip could not be saved as completed ❌");
+            return;
+        }
+    }
+
+    currentJourneyId = null;
+
     document.getElementById("journeySetup").style.display = "block";
     document.getElementById("journeyActive").style.display = "none";
+
     alert("SafeTrip completed! Glad you reached safely.");
 }
-
 // ================= HELPERS =================
 function updateTimerDisplay(elementId, totalSeconds) {
     const m = Math.floor(totalSeconds / 60);
